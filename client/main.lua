@@ -185,27 +185,42 @@ qbx.entityStateHandler('truckstate', function(entity, _, value)
 			Wait(1000)
 		end
     elseif value == TruckState.LOOTABLE then
-		if c4Prop and DoesEntityExist(c4Prop) then
-			DeleteObject(c4Prop)
-		end
-		if Entity(truck).state.truckstate == TruckState.PLANTED then
-			local transCoords = GetEntityCoords(truck)
-			AddExplosion(transCoords.x,transCoords.y,transCoords.z, 'EXPLOSION_TANKER', 2.0, true, false, 2.0)
-		end
+        if c4Prop and DoesEntityExist(c4Prop) then
+            DeleteObject(c4Prop)
+        end
+        if Entity(truck).state.truckstate == TruckState.PLANTED then
+            local backDoorIds = {2, 3}
+            for _, doorId in ipairs(backDoorIds) do
+                if GetIsDoorValid(truck, doorId) then
+                    SetVehicleDoorOpen(truck, doorId, true, true)
+                    SetVehicleDoorBroken(truck, doorId, false)
+                    local doorBone = GetEntityBoneIndexByName(truck, 'door_pside_r')
+                    local doorPos = GetWorldPositionOfEntityBone(truck, doorBone)
+                    local doorOffset = vector3(0, 0, 0.5)
+                    local doorForce = vector3(0, 10, 0)
+                    ApplyForceToEntity(truck, 1, doorForce.x, doorForce.y, doorForce.z, doorOffset.x, doorOffset.y, doorOffset.z, true, true, true, true, true)
+                end
+            end
+    
+            local min, max = GetModelDimensions(truck)
+            local explosionOffset = vector3(0, (max.y - min.y) * -0.5, (max.z - min.z) * -0.5)
+            local explosionPos = GetOffsetFromEntityInWorldCoords(truck, explosionOffset.x, explosionOffset.y, explosionOffset.z)
+            AddExplosion(explosionPos.x, explosionPos.y, explosionPos.z, 2, 0.0, true, false, 1.0)
+        end
         exports.ox_target:addLocalEntity(truck, {
-			name = 'transportTake',
-			label = locale('info.loot_truck'),
-			icon = 'fas fa-sack-dollar',
-			canInteract = function()
-				return QBX.PlayerData.job.type ~= 'leo'
-			end,
-			bones = {
-				'seat_dside_r',
-				'seat_pside_r',
-			},
-			onSelect = lootTruck,
-			distance = 3.0,
-		})
+            name = 'transportTake',
+            label = locale('info.loot_truck'),
+            icon = 'fas fa-sack-dollar',
+            canInteract = function()
+                return QBX.PlayerData.job.type ~= 'leo'
+            end,
+            bones = {
+                'seat_dside_r',
+                'seat_pside_r',
+            },
+            onSelect = lootTruck,
+            distance = 3.0,
+        })
     elseif value == TruckState.LOOTED then
 		exports.ox_target:removeLocalEntity(truck, 'transportTake')
     end
